@@ -23,6 +23,19 @@ namespace PseudoEnumerable.Tests
         public IEnumerable<string> Filter_SetOfInteger_FilteredSetString(IEnumerable<string> source)
             => source.Filter(new Func<string, bool>(i => i.Contains('7')));
 
+        [TestCase(arg: new[] { 7, 150, -28, 17 }, ExpectedResult = false)]
+        [TestCase(arg: new[] { 7, 150, 28, 17 }, ExpectedResult = true)]
+        public bool ForAll_SetOfInteger_FilteredSet(IEnumerable<int> source)
+            => source.ForAll((i => i > 0));
+
+        [TestCase(arg: new[] {7, 150, 28, 17}, ExpectedResult = new[] { 7, 150, 28, 17 })]
+        public IEnumerable<int> CastTo_SetOfInteger_FilteredSet(IEnumerable<int> source)
+            => Enumerable.CastTo<int>(source);
+
+
+        [Test]
+        public void CastTo_ArrayIsEmpty_ThrowArgumentNullException() =>
+            Assert.Throws<InvalidCastException>(() => Enumerable.CastTo<int>(new object[]{  "njcd", 28}));
 
     }
 }

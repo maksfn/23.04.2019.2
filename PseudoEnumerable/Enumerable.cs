@@ -95,7 +95,17 @@ namespace PseudoEnumerable
         /// <exception cref="InvalidCastException">An element in the sequence cannot be cast to type TResult.</exception>
         public static IEnumerable<TResult> CastTo<TResult>(IEnumerable source)
         {
-            throw new NotImplementedException();
+            Validate(source);
+
+            foreach (var item in source)
+            {
+                if (!(item is TResult))
+                {
+                    throw new InvalidCastException($"{nameof(item)} cannot be cast to type {nameof(TResult)}");
+                }
+            }
+
+            return DoCastTo<TResult>(source);
         }
 
         /// <summary>
@@ -151,6 +161,29 @@ namespace PseudoEnumerable
             if (predicate is null)
             {
                 throw new ArgumentNullException($"{nameof(predicate)} cannot be null.");
+            }
+        }
+
+        private static void Validate(IEnumerable source)
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException($"{nameof(source)} cannot be null.");
+            }
+
+        }
+
+
+        private static IEnumerable<TResult> DoCastTo<TResult>(IEnumerable source)
+        {
+            foreach (var item in source)
+            {
+                if (!(item is TResult))
+                {
+                    throw new InvalidCastException($"{nameof(item)} cannot be cast to type {nameof(TResult)}");
+                }
+
+                yield return (TResult) item;
             }
         }
     }
