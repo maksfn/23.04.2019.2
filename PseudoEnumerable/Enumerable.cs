@@ -42,7 +42,10 @@ namespace PseudoEnumerable
         public static IEnumerable<TResult> Transform<TSource, TResult>(this IEnumerable<TSource> source,
             Func<TSource, TResult> transformer)
         {
-            throw new NotImplementedException();
+            foreach (TSource item in source)
+            {
+                yield return transformer(item);
+            }
         }
 
         /// <summary>
@@ -60,7 +63,11 @@ namespace PseudoEnumerable
         public static IEnumerable<TSource> SortBy<TSource, TKey>(this IEnumerable<TSource> source,
             Func<TSource, TKey> key)
         {
-            throw new NotImplementedException();
+            Validate(source, key);
+
+            var result = new SortedDictionary<TKey, List<TSource>>();
+
+            return DoSortBy(result, source, key);
         }
 
         /// <summary>
@@ -80,7 +87,11 @@ namespace PseudoEnumerable
         public static IEnumerable<TSource> SortBy<TSource, TKey>(this IEnumerable<TSource> source,
             Func<TSource, TKey> key, IComparer<TKey> comparer)
         {
-            throw new NotImplementedException();
+            Validate(source, key, comparer);
+
+            var result = new SortedDictionary<TKey, List<TSource>>(comparer);
+
+            return DoSortBy(result, source, key);
         }
 
         /// <summary>
@@ -101,7 +112,7 @@ namespace PseudoEnumerable
             {
                 if (!(item is TResult))
                 {
-                    throw new InvalidCastException($"{nameof(item)} cannot be cast to type {nameof(TResult)}");
+                    throw new InvalidCastException($"{nameof(item)} cannot cast to type {nameof(TResult)}");
                 }
             }
 
@@ -124,8 +135,26 @@ namespace PseudoEnumerable
         {
             Validate(source, predicate);
 
-            return CheckerForAll(source, predicate);
+            return DoForAll(source, predicate);
         }
+
+        /// <summary>
+        /// Generates a sequence of integers.
+        /// </summary>
+        /// <param name="start">Initial value.</param>
+        /// <param name="count">Count of elements.</param>
+        /// <param name="predicate">A function to generate numbers.</param>
+        /// <returns>Sequence of integers</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Throws if <paramref name="count"/> less than 0.</exception>
+        /// <exception cref="ArgumentNullException">Throws if <paramref name="predicate"/> is null.</exception>
+        public static IEnumerable<int> Generate(int start, int count, Func<int, int> predicate)
+        {
+            Validate(count, predicate);
+
+            return DoGenerate(start, count, predicate);
+        }
+
+        #region Service methods
 
         private static IEnumerable<TSource> DoFilter<TSource>(IEnumerable<TSource> source, Func<TSource, bool> predicate)
         {
@@ -138,7 +167,7 @@ namespace PseudoEnumerable
             }
         }
 
-        private static bool CheckerForAll<TSource>(IEnumerable<TSource> source, Func<TSource, bool> predicate)
+        private static bool DoForAll<TSource>(IEnumerable<TSource> source, Func<TSource, bool> predicate)
         {
             foreach (var item in source)
             {
@@ -150,29 +179,6 @@ namespace PseudoEnumerable
 
             return true;
         }
-
-        private static void Validate<TSource>(IEnumerable<TSource> source, Func<TSource, bool> predicate)
-        {
-            if (source is null)
-            {
-                throw new ArgumentNullException($"{nameof(source)} cannot be null.");
-            }
-
-            if (predicate is null)
-            {
-                throw new ArgumentNullException($"{nameof(predicate)} cannot be null.");
-            }
-        }
-
-        private static void Validate(IEnumerable source)
-        {
-            if (source is null)
-            {
-                throw new ArgumentNullException($"{nameof(source)} cannot be null.");
-            }
-
-        }
-
 
         private static IEnumerable<TResult> DoCastTo<TResult>(IEnumerable source)
         {
@@ -186,5 +192,92 @@ namespace PseudoEnumerable
                 yield return (TResult) item;
             }
         }
+
+        private static IEnumerable<TSource> DoSortBy<TSource, TKey>(SortedDictionary<TKey, List<TSource>> sortedSet, 
+            IEnumerable<TSource> source, Func<TSource, TKey> key)
+        {
+            foreach (var item in source)
+            {
+                if (sortedSet.ContainsKey(key(item)))
+                {
+                    sortedSet[key(item)].Add(item);
+                }
+                else
+                {
+                    sortedSet.Add(key(item), new List<TSource>(){item});
+                }
+            }
+
+            foreach (var item in sortedSet)
+            {
+                foreach (var itm in item.Value)
+                {
+                    yield return itm;
+                }
+            }
+        }
+
+        private static IEnumerable<int> DoGenerate(int start, int count, Func<int, int> predicate)
+        {
+            for (int i = start; i < start + count; i++)
+            {
+                yield return predicate(i);
+            }
+        }
+
+        private static void Validate<TSource, TResult>(IEnumerable<TSource> source, Func<TSource, TResult> predicate)
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException($"{nameof(source)} cannot be null.");
+            }
+
+            if (predicate is null)
+            {
+                throw new ArgumentNullException($"{nameof(predicate)} cannot be null.");
+            }
+        }
+
+        private static void Validate<TSource, TResult>(IEnumerable<TSource> source,
+            Func<TSource, TResult> predicate, IComparer<TResult> comparer)
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException($"{nameof(source)} cannot be null.");
+            }
+
+            if (predicate is null)
+            {
+                throw new ArgumentNullException($"{nameof(predicate)} cannot be null.");
+            }
+
+            if (comparer is null)
+            {
+                throw new ArgumentNullException($"{nameof(comparer)} cannot be null.");
+            }
+        }
+
+        private static void Validate(IEnumerable source)
+        {
+            if (source is null)
+            {
+                throw new ArgumentNullException($"{nameof(source)} cannot be null.");
+            }
+        }
+
+        private static void Validate(int count, Func<int, int> predicate)
+        {
+            if (count < 0)
+            {
+                throw new ArgumentOutOfRangeException($"{nameof(count)} cannot be less than 0.");
+            }
+
+            if (predicate is null)
+            {
+                throw new ArgumentNullException($"{nameof(predicate)} cannot be null.");
+            }
+        }
+
+        #endregion
     }
 }
